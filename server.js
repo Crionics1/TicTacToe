@@ -123,7 +123,6 @@ app.get("/move", function(req, res) {
 		res.send(JSON.stringify(false));
 		res.end();
 		return;
-
 	}
 
 	board[row][col] = player;
