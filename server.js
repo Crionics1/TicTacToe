@@ -3,6 +3,8 @@
 // Import packages
 var express = require("express");
 var ejs = require("ejs");
+var socket = require("socket.io")
+
 
 // Create server
 var app = express();
@@ -83,8 +85,14 @@ app.get("/playero", function(req, res) {
 
 // HTTP GET endpoint that resets the game
 app.get("/reset", function(req, res) {
-	resetGame();
-	res.send(JSON.stringify(true));
+	if(gameEnded(board)){
+		resetGame();
+		res.send(JSON.stringify(true));
+		res.end();
+		return
+	}
+
+	res.send(JSON.stringify(fase));
 	res.end();
 });
 
@@ -114,10 +122,10 @@ app.get("/turn", function(req, res) {
 });
 
 // HTTP GET endpoint that makes a player move
-app.get("/move", function(req, res) {
-	const row = req.query.row
-	const col = req.query.col
-	const player = req.query.player
+app.post("/move", function(req, res) {
+	const row = req.body.row
+	const col = req.body.col
+	const player = req.body.player
 
 	if(gameEnded(board) || player != turn || board[row][col] != ""){
 		res.send(JSON.stringify(false));
@@ -137,6 +145,9 @@ app.get("/move", function(req, res) {
 		turn = "";
 	}
 
+	//for socket
+	io.emit('move', turn)
+
 	res.send(JSON.stringify(true));
 	res.end();
 });
@@ -146,5 +157,12 @@ resetGame();
 
 // Listen for new HTTP connections at the given port number
 var port = process.env.PORT || 4000;
-app.listen(port);
+var server = app.listen(port);
 console.log("Listening for new connections on http://localhost:" + port + "/");
+
+var io = socket(server)
+
+io.on("connection",function(socket){
+	console.log("Socket connection estabilished");
+})
+

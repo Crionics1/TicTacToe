@@ -2,86 +2,102 @@
 var gameUI = new GameUI(".container", player);
 console.log(player)
 
-function setBoard(){
-	$.getJSON("/board", function(data){
-		gameUI.setBoard(data)
-	})
-}
+var socket = io.connect("localhost:4000")
 
-
-// Initialize game
-// TODO: Reimplement this function to support multiplayer
-var init = function() {
-	setBoard()
-
-	if(gameUI.checkEnded()){
-		gameUI.setMessage("The game has ended.");
-		return;
+socket.on('move',function(data){
+	if (data != gameUI.player && data != "") {
+		gameUI.setMessage("Waiting for opponent...")
+		return
 	}
 
-	$.getJSON("/turn", function(data){
-		console.log(data)
+	//else set new board
+	setBoard()
 
-		if (gameUI.player == data){
-			gameUI.setMessage("It is your move.");
-			gameUI.waitForMove();
-		}
+	//check if it's the players turn
+	if (data == gameUI.player) {
+		gameUI.setMessage("It is your move.")
+		gameUI.waitForMove()
+		return;
+	}
+})
 
-		if(gameUI.player != data){
-			gameUI.setMessage("Waiting for opponent…");
-			gameUI.disable();
-			waitForOpponent();
+//Get Board from server and set it 
+async function setBoard() {
+	$.getJSON("/board", function (data) {
+		gameUI.setBoard(data)
+		if (gameUI.checkEnded()) {
+			gameUI.setMessage("The game has ended.");
 		}
 	})
 }
 
-function waitForOpponent() {
+//wait for opponent using long polling
+/* function waitForOpponent() {
 	var timer = setInterval(() => {
-		$.getJSON("/turn", function(data) {
-			if(data != gameUI.player && data != ""){
+		$.getJSON("/turn", function (data) {
+			// if it's still opponent's turn continue long polling
+			if (data != gameUI.player && data != "") {
 				gameUI.setMessage("Waiting for opponent...")
 				return
 			}
 
+			//else set new board
 			setBoard()
 
-			if(data == ""){
-				gameUI.setMessage("The Game Has Ended.")
-
-				clearInterval(timer)
-				return;
-			}
-
-			if(data == gameUI.player){
-				clearInterval(timer)
-
+			//check if it's the players turn
+			if (data == gameUI.player) {
 				gameUI.setMessage("It is your move.")
 				gameUI.waitForMove()
 				return;
 			}
+
+			//stop long polling if no longer opponents turn
+			clearInterval(timer)
 		})
 	}, 1000);
-}
+} */
 
+
+// Initialize game
+// TODO: Reimplement this function to support multiplayer
+var init = function () {
+	setBoard()
+		.then(() => {
+			$.getJSON("/turn", function (data) {
+				//if its users turn wait for turn
+				if (gameUI.player == data) {
+					gameUI.setMessage("It is your move.");
+					gameUI.waitForMove();
+				}
+
+				//if its opponents turn disable user's UI and wait for his move
+				if (gameUI.player != data && data != "") {
+					gameUI.setMessage("Waiting for opponent…");
+					gameUI.disable();
+					//waitForOpponent();
+				}
+			})
+		})
+}
 
 // Callback function for when the user makes a move
 // TODO: Reimplement this function to support multiplayer
-var callback = function(row, col, player) {
+var callback = function (row, col, player) {
 	gameUI.setMessage("Sending your move…")
-	$.getJSON("/move", { row: row, col: col, player: player}, function(data){
-		console.log(data);
-		if(data == true){
+	$.post("/move", { row: row, col: col, player: player }, function (data) {
+		if (data == "true") {
 			gameUI.disable();
-			gameUI.setSquare(row,col,player);
+			gameUI.setSquare(row, col, player);
 			gameUI.setMessage("Waiting For Opponent");
-			waitForOpponent();
+			//waitForOpponent();
 			return
 		}
-		if(data == ""){
+		if (data == "") {
 			gameUI.setMessage("The Game Has Ended");
 		}
 	})
 };
+
 
 // Set callback for user move
 gameUI.callback = callback;
