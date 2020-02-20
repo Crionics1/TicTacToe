@@ -151,6 +151,7 @@ GameUI.prototype.setMessage = function(message) {
 // Get the next move from the player
 GameUI.prototype.waitForMove = function() {
 	if (!this.ended) {
+		debugger
 		this.enable();
 	}
 }

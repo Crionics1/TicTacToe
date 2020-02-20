@@ -38,7 +38,7 @@ var init = function() {
 function waitForOpponent() {
 	var timer = setInterval(() => {
 		$.getJSON("/turn", function(data) {
-			if(data != gameUI.player){
+			if(data != gameUI.player && data != ""){
 				gameUI.setMessage("Waiting for opponent...")
 				return
 			}
@@ -54,9 +54,9 @@ function waitForOpponent() {
 
 			if(data == gameUI.player){
 				clearInterval(timer)
-				
+
 				gameUI.setMessage("It is your move.")
-				gameui.waitForMove()
+				gameUI.waitForMove()
 				return;
 			}
 		})
